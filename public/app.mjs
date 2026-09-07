@@ -8,7 +8,7 @@ function status(text){$('status').textContent=text;}
 function message(role,text){messages.push({role,text});renderMessages();}
 function renderMessages(){
   $('message-count').textContent=`${messages.length} turns`;
-  $('transcript').innerHTML=messages.length?messages.map(m=>`<div class="utterance ${m.role==='agent'?'agent':''}"><strong>${m.role==='agent'?'COUNTBACK':m.role==='demo'?'GUIDED DEMO':'YOU'}</strong>${escape(m.text)}</div>`).join(''):'<p class="empty-transcript">Your spoken counts and readbacks will appear here.</p>';
+  $('transcript').innerHTML=messages.length?messages.map(m=>`<div class="utterance ${m.role==='agent'?'agent':''}"><strong>${m.role==='agent'?'COUNTBACK':m.role==='demo'?'GUIDED DEMO':m.role==='sample'?'SAMPLE AUDIO':'YOU'}</strong>${escape(m.text)}</div>`).join(''):'<p class="empty-transcript">Your spoken counts and readbacks will appear here.</p>';
   $('transcript').scrollTop=$('transcript').scrollHeight;
 }
 function render(){
@@ -41,19 +41,40 @@ $('demo').onclick=async()=>{
   for(const s of steps){await delay(1300);message('demo',s.text);applyCount(ledger,{...s,evidence:s.text},crypto.randomUUID(),[s.text]);render();await delay(850);message('agent',s.reply);}
   demoRunning=false;setActive(false,'DEMO COMPLETE');$('voice-title').textContent='Delivery checked.';$('voice-description').textContent='Five sleeves short. Two bottles damaged. Every correction retained.';status('Guided demo complete. Edit a count or export the receipt.');render();
 };
-function setActive(active,label){$('start').hidden=active;$('stop').hidden=!active;$('demo').disabled=active;$('reset').disabled=active;$('keyboard').disabled=active;$('typed-form').hidden=!active||!$('keyboard').checked||demoRunning;$('mode-label').textContent=label;$('orb').classList.toggle('live',active);}
+function setActive(active,label){$('start').hidden=active;$('stop').hidden=!active;$('demo').disabled=active;$('live-sample').disabled=active;$('reset').disabled=active;$('keyboard').disabled=active;$('typed-form').hidden=!active||!$('keyboard').checked||demoRunning||Boolean(session?.sample);$('mode-label').textContent=label;$('orb').classList.toggle('live',active);}
 function base64(buffer){const a=new Uint8Array(buffer);let text='';for(const b of a)text+=String.fromCharCode(b);return btoa(text);}
 function clearPlayback(s){for(const source of s.sources){try{source.stop();}catch{}}s.sources.clear();s.playAt=0;}
 function play(s,data){if(!s.ctx||s.ctx.state==='closed')return;const bytes=Uint8Array.from(atob(data),c=>c.charCodeAt(0));const view=new DataView(bytes.buffer),audio=s.ctx.createBuffer(1,Math.floor(bytes.length/2),24000);const channel=audio.getChannelData(0);for(let i=0;i<channel.length;i++)channel[i]=view.getInt16(i*2,true)/32768;const source=s.ctx.createBufferSource();source.buffer=audio;source.connect(s.ctx.destination);s.sources.add(source);source.onended=()=>s.sources.delete(source);const at=Math.max(s.ctx.currentTime+.025,s.playAt);source.start(at);s.playAt=at+audio.duration;}
 function send(s,event){if(s.ws?.readyState===WebSocket.OPEN)s.ws.send(JSON.stringify(event));}
 function finish(s,text){if(s.finished)return;s.finished=true;clearTimeout(s.timer);clearTimeout(s.closeTimer);s.stream?.getTracks().forEach(t=>t.stop());s.worklet?.disconnect();s.source?.disconnect();clearPlayback(s);s.ctx?.close().catch(()=>{});s.ws?.close();if(session===s)session=null;setActive(false,'SESSION ENDED');$('voice-title').textContent='Ready to review.';$('voice-description').textContent='Check your receipt and correct anything that needs it.';status(text);render();}
 function end(s){if(!s||s.finished)return;s.ending=true;s.stream?.getTracks().forEach(t=>t.stop());clearPlayback(s);if(s.ws?.readyState===WebSocket.OPEN){send(s,{type:'session.end'});s.closeTimer=setTimeout(()=>finish(s,'Session ended. Your draft remains on screen.'),5000);}else finish(s,'Session ended.');}
-async function connect(){
+async function streamSample(s){
+  if(s.finished||s.ending)return;
+  s.sampleStep++;
+  if(s.sampleStep>4){status('Live sample complete. Review the actual transcribed counts.');end(s);return;}
+  s.sampleWaiting='listening';
+  s.sampleStreaming=true;
+  try{
+    await delay(Math.max(0,(s.playAt-s.ctx.currentTime)*1000)+250);
+    const response=await fetch(`/sample-${s.sampleStep}.wav`);if(!response.ok)throw new Error('Sample audio could not be loaded.');
+    const buffer=await response.arrayBuffer(),v=new DataView(buffer);let audio=null,valid=false;
+    for(let at=12;at+8<=v.byteLength;){const id=String.fromCharCode(...new Uint8Array(buffer,at,4)),size=v.getUint32(at+4,true);if(at+8+size>v.byteLength)throw new Error('Invalid sample audio.');if(id==='fmt ')valid=v.getUint16(at+8,true)===1&&v.getUint16(at+10,true)===1&&v.getUint32(at+12,true)===24000&&v.getUint16(at+22,true)===16;if(id==='data')audio=new Uint8Array(buffer,at+8,size);at+=8+size+(size%2);}
+    if(!valid||!audio)throw new Error('Sample must be mono PCM16 at 24 kHz.');
+    status(`Streaming synthetic sample ${s.sampleStep} of 4 through live AssemblyAI speech recognition.`);
+    // No microphone is opened. The same prerecorded PCM is played and streamed in real time.
+    for(let at=0;at<audio.length&&!s.finished&&!s.ending;at+=2400){const chunk=audio.slice(at,at+2400);const encoded=base64(chunk.buffer);send(s,{type:'input.audio',audio:encoded});play(s,encoded);await delay(50);}
+    // A short silence lets turn detection finalize the prerecorded utterance.
+    for(let i=0;i<30&&!s.finished&&!s.ending;i++){send(s,{type:'input.audio',audio:base64(new ArrayBuffer(2400))});await delay(50);}
+    s.sampleStreaming=false;
+    if(s.sampleWaiting==='next')streamSample(s);
+  }catch(error){s.error=error.message;end(s);}
+}
+async function connect(useSample=false){
   if(session||demoRunning)return;
-  const s={sources:new Set(),pending:[],seen:new Set(),evidence:[],playAt:0,finished:false};session=s;setActive(true,'CONNECTING');status('Requesting microphone permission…');render();
+  const s={sources:new Set(),pending:[],seen:new Set(),evidence:[],playAt:0,finished:false,sample:useSample,sampleStep:0,sampleWaiting:'greeting'};session=s;setActive(true,'CONNECTING');status(useSample||$('keyboard').checked?'Connecting to AssemblyAI…':'Requesting microphone permission…');render();
   try{
     s.ctx=new AudioContext();await s.ctx.resume();
-    s.keyboard=$('keyboard').checked;
+    s.keyboard=$('keyboard').checked||s.sample;
     if(!s.keyboard)s.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:false,channelCount:1}});
     if(s.finished){s.stream?.getTracks().forEach(t=>t.stop());return;}
     if(!s.keyboard)await s.ctx.audioWorklet.addModule('/pcm-processor.js');
@@ -69,20 +90,21 @@ async function connect(){
           if(s.ending){end(s);return;}
           if(!s.keyboard){s.source=s.ctx.createMediaStreamSource(s.stream);s.worklet=new AudioWorkletNode(s.ctx,'capture-pcm');const mute=s.ctx.createGain();mute.gain.value=0;s.source.connect(s.worklet);s.worklet.connect(mute).connect(s.ctx.destination);
           s.worklet.port.onmessage=e=>{if(!s.ending&&!s.finished)send(s,{type:'input.audio',audio:base64(e.data)});};}
-          s.ready=true;$('mode-label').textContent=s.keyboard?'LIVE · KEYBOARD':'LIVE · LISTENING';$('voice-title').textContent=s.keyboard?'Type it. I’ll read it back.':'Go ahead. I’m listening.';$('voice-description').textContent='Name the product, carton count, loose units, and damage.';status(s.keyboard?'Connected to AssemblyAI · keyboard input, voice response.':'Connected to AssemblyAI · microphone active.');
-        }else if(msg.type==='transcript.user'){s.evidence.push(msg.text);message('user',msg.text);}
+          s.ready=true;$('mode-label').textContent=s.sample?'LIVE · SAMPLE AUDIO':s.keyboard?'LIVE · KEYBOARD':'LIVE · LISTENING';$('voice-title').textContent=s.sample?'Hear a delivery come together.':s.keyboard?'Type it. I’ll read it back.':'Go ahead. I’m listening.';$('voice-description').textContent=s.sample?'Synthetic voice clips, real AssemblyAI transcription and tool calls.':'Name the product, carton count, loose units, and damage.';status(s.sample?'Connected. Waiting for the agent greeting before streaming sample audio.':s.keyboard?'Connected to AssemblyAI · keyboard input, voice response.':'Connected to AssemblyAI · microphone active.');
+        }else if(msg.type==='transcript.user'){s.evidence.push(msg.text);message(s.sample?'sample':'user',msg.text);}
         else if(msg.type==='transcript.agent')message('agent',msg.text);
         else if(msg.type==='reply.audio'&&!s.ending)play(s,msg.data);
-        else if(msg.type==='input.speech.started')clearPlayback(s);
+        else if(msg.type==='input.speech.started'&&!s.sample)clearPlayback(s);
         else if(msg.type==='tool.call')s.pending.push(msg);
         else if(msg.type==='reply.done'){
           if(msg.status==='interrupted'){s.pending=[];clearPlayback(s);return;}
           const pending=s.pending;s.pending=[];
           for(const call of pending){
             if(s.seen.has(call.call_id))continue;s.seen.add(call.call_id);
-            try{const result=call.name==='get_receipt'?{rows:summarize(ledger)}:call.name==='record_count'?applyCount(ledger,call.arguments,call.call_id,s.evidence):(()=>{throw new Error('Unknown tool.')})();render();send(s,{type:'tool.result',call_id:call.call_id,result:JSON.stringify(result),is_error:false});}
+            try{const result=call.name==='get_receipt'?{rows:summarize(ledger)}:call.name==='record_count'?applyCount(ledger,call.arguments,call.call_id,s.evidence):(()=>{throw new Error('Unknown tool.')})();if(s.sample&&call.name==='record_count')s.sampleWaiting='readback';render();send(s,{type:'tool.result',call_id:call.call_id,result:JSON.stringify(result),is_error:false});}
             catch(error){send(s,{type:'tool.result',call_id:call.call_id,result:JSON.stringify({error:error.message}),is_error:true});status(error.message);}
           }
+          if(s.sample&&!pending.length&&['greeting','readback'].includes(s.sampleWaiting)){if(s.sampleStreaming)s.sampleWaiting='next';else streamSample(s);}
         }else if(msg.type==='session.ended')finish(s,'Voice session ended. Review the draft receipt.');
         else if(msg.type==='session.error'){status(`Voice service: ${msg.message||msg.code}`);end(s);}
       }catch{status('Could not process a voice event. Ending the session.');end(s);}
@@ -91,8 +113,9 @@ async function connect(){
     s.ws.onclose=()=>finish(s,'Connection closed. Your draft remains available.');
   }catch(error){finish(s,error.name==='NotAllowedError'?'Microphone permission was declined. Try the guided demo.':error.message||'Could not start the voice session.');}
 }
-$('start').onclick=connect;$('stop').onclick=()=>end(session);
+$('start').onclick=()=>connect(false);$('stop').onclick=()=>end(session);
+$('live-sample').onclick=()=>{if(session||demoRunning)return;ledger=createLedger();messages=[];renderMessages();connect(true);};
 $('typed-form').onsubmit=e=>{e.preventDefault();const text=$('typed-count').value.trim();if(!text||!session?.ready||session.ending)return;session.evidence.push(text);message('user',text);send(session,{type:'conversation.message',role:'user',content:text});send(session,{type:'reply.create',instructions:`Respond to the latest typed user message: ${JSON.stringify(text)}. Use the record_count tool when all count fields are known.`});$('typed-count').value='';};
 window.addEventListener('pagehide',()=>{if(session)send(session,{type:'session.end'});});
-fetch('/api/status').then(r=>r.json()).then(data=>{$('access-wrap').hidden=!data.codeRequired;if(!data.liveAvailable){$('start').disabled=true;status('Live voice is not configured. Explore the guided demo.');}}).catch(()=>status('Live connection unavailable. The guided demo still works.'));
+fetch('/api/status').then(r=>r.json()).then(data=>{$('access-wrap').hidden=!data.codeRequired;if(!data.liveAvailable){$('start').disabled=true;$('live-sample').disabled=true;status('Live voice is not configured. Explore the guided demo.');}}).catch(()=>status('Live connection unavailable. The guided demo still works.'));
 render();
