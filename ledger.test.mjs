@@ -1,0 +1,14 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createLedger,applyCount,summarize,toCSV} from './public/ledger.mjs';
+const args=(data={})=>({sku:'OAT',cartons:5,loose:0,damaged:2,evidence:'Five cartons, two damaged.',...data});
+test('carton arithmetic includes damage without double counting',()=>{const l=createLedger();applyCount(l,args(),'one',['Five cartons, two damaged.']);const r=summarize(l)[0];assert.equal(r.received,60);assert.equal(r.usable,58);assert.equal(r.shortage,12)});
+test('correction replaces count, retaining both evidence events',()=>{const l=createLedger();applyCount(l,args(),'one',['Five cartons, two damaged.']);applyCount(l,args({cartons:6,evidence:'Six, not five.'}),'two',['Six, not five.']);assert.equal(summarize(l)[0].received,72);assert.equal(l.events.length,2);assert.equal(l.events[0].cartons,5)});
+test('replayed tool call does not create a duplicate count',()=>{const l=createLedger();applyCount(l,args(),'one',['Five cartons, two damaged.']);applyCount(l,args(),'one',[]);assert.equal(l.events.length,1)});
+test('rejects negative, fractional, missing and impossible counts atomically',()=>{for(const a of [{cartons:-1},{loose:.2},{damaged:61},{cartons:undefined},{sku:'INVALID'}]){const l=createLedger();assert.throws(()=>applyCount(l,args(a),'one',['Five cartons, two damaged.']));assert.equal(l.events.length,0)}});
+test('rejects invented evidence and preserves unmatched products',()=>{const l=createLedger();assert.throws(()=>applyCount(l,args(),'one',['Six cartons.']));assert.equal(summarize(l)[1].received,null)});
+test('loose units and overage reconcile correctly',()=>{const l=createLedger();applyCount(l,args({sku:'CUPS',cartons:5,loose:5,damaged:0}),'one',['Five cartons, two damaged.']);assert.equal(summarize(l)[2].overage,5);assert.equal(summarize(l)[2].received,55)});
+test('CSV quotes embedded quotes and newline evidence',()=>{const l=createLedger();const quote='I said "five",\nnot six.';applyCount(l,args({evidence:quote}),'one',[quote]);assert.match(toCSV(l),/"I said ""five"",\nnot six\."/)});
+test('punctuation-only evidence cannot match any transcript',()=>{assert.throws(()=>applyCount(createLedger(),args({evidence:'!!!'}),'one',['five cartons']))});
+test('spreadsheet-like source text is exported as text',()=>{const l=createLedger(),quote='=five cartons';applyCount(l,args({evidence:quote}),'one',[quote]);assert.match(toCSV(l),/"'=five cartons"/)});
+test('a correction quote may span consecutive speech transcript chunks',()=>{const l=createLedger();applyCount(l,args({cartons:6,evidence:'6 cartons of oat milk. 0 loose bottles.'}),'split',['Correction.','I received 6 cartons of oat milk.','0 loose bottles.','Still 2 damaged bottles.']);assert.equal(summarize(l)[0].received,72);assert.throws(()=>applyCount(l,args({evidence:'milk six cartons'}),'invented',['six cartons','milk']))});

@@ -5,3 +5,7 @@ node_modules/
 artifacts/
 *.log
 public/workbench.html
+
+PROGRESS.md
+tmp/
+output/
