@@ -8,7 +8,7 @@ const port=Number(process.env.PORT||3210);
 const buckets=new Map(); let issued=0;
 const same=(a,b)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y)};
 const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml'};
-export const server=http.createServer(async(req,res)=>{
+export const handler=async(req,res)=>{
   const send=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
   try{
     const url=new URL(req.url,'http://localhost');
@@ -42,5 +42,6 @@ export const server=http.createServer(async(req,res)=>{
     const data=await readFile(file);
     res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream','Cache-Control':'no-cache'});res.end(req.method==='HEAD'?undefined:data);
   }catch(error){send(error.code==='ENOENT'?404:500,{error:error.code==='ENOENT'?'Not found.':'Request failed. Please try again.'});}
-});
+};
+export const server=http.createServer(handler);
 if(process.argv[1]===fileURLToPath(import.meta.url))server.listen(port,'127.0.0.1',()=>console.log(`Countback running at http://localhost:${port}`));
