@@ -30,14 +30,15 @@ export function applyCount(ledger, args, callId, evidenceTexts=[]) {
   const total=args.cartons*item.perCarton+args.loose;
   if(args.damaged>total) throw new Error('Damaged units cannot exceed the total received. Ask for clarification.');
   if(typeof args.evidence!=='string'||!args.evidence.trim()) throw new Error('A source quote is required.');
-  const norm=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-  if(!evidenceTexts.some(t=>norm(t).includes(norm(args.evidence)))) throw new Error('The source quote must appear in a received user transcript.');
+  const norm=s=>s.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+  const quote=norm(args.evidence);
+  if(!quote||!norm(evidenceTexts.join(' ')).includes(quote)) throw new Error('The source quote must appear in a received user transcript.');
   ledger.revision++;
   ledger.seen.push(callId);
   ledger.events.push({sku:args.sku,cartons:args.cartons,loose:args.loose,damaged:args.damaged,evidence:args.evidence,revision:ledger.revision,at:new Date().toISOString()});
   return {ok:true,revision:ledger.revision,row:summarize(ledger).find(r=>r.sku===args.sku),note:'Draft count replaced. Review before exporting.'};
 }
 export function toCSV(ledger) {
-  const cell=value=>'"'+String(value??'').replaceAll('"','""')+'"';
+  const cell=value=>{let text=String(value??'');if(typeof value==='string'&&/^[\s]*[=+@-]/.test(text))text="'"+text;return '"'+text.replaceAll('"','""')+'"';};
   return [['SKU','Product','Ordered','Received','Damaged','Usable','Shortage','Overage','Source quote'],...summarize(ledger).map(r=>[r.sku,r.name,r.ordered,r.received,r.damaged,r.usable,r.shortage,r.overage,r.evidence])].map(row=>row.map(cell).join(',')).join('\r\n');
 }
