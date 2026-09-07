@@ -2,6 +2,12 @@
 
 A hands-free delivery receiving workspace for the AssemblyAI Voice Agent Hackathon. Speak carton counts, correct mistakes, flag damaged units, then review and export a receipt. This is an AI-assisted contest project by Alexandr Khrustalev / SanderSaxBuilds.
 
+## Try the hosted app
+
+https://countback.vercel.app
+
+Choose **Try guided demo** for an API-free scripted walkthrough. **Try live sample audio** streams labeled synthetic speech through the actual AssemblyAI Voice Agent API without opening the microphone. Live modes require the judge access code.
+
 ## Run locally
 
 Requires Node.js 22+. No packages required.
@@ -40,7 +46,7 @@ The purchase order is entirely synthetic. Live audio and session configuration a
 
 ## Current validation
 
-Seven unit tests pass for arithmetic, replacement corrections, duplicate calls, invalid counts, evidence provenance, overage and CSV quoting. A live AssemblyAI keyboard-to-voice session successfully called record_count for three products and an oat-milk correction: final totals 72 bottles (2 damaged), 24 bags, and 45 sleeves (5 short), with four retained history events. The 180-second cap ended the session correctly. Microphone capture and deployment validation are pending.
+Ten unit tests pass for arithmetic, replacement corrections, duplicate calls, invalid counts, evidence provenance, overage and CSV quoting. A live AssemblyAI keyboard-to-voice session successfully called record_count for three products and an oat-milk correction: final totals 72 bottles (2 damaged), 24 bags, and 45 sleeves (5 short), with four retained history events. The 180-second cap ended the session correctly. The hosted app and its token endpoint were verified with a real keyboard-to-voice tool call. A live PCM audio test transcribed all four prerecorded utterances and saved the expected 72 / 24 / 45 totals, including the correction and four history events. The sample speech is synthetic; transcripts and tool results are actual AssemblyAI responses. Physical microphone testing and field trials remain pending.
 
 ## License
 
