@@ -4,3 +4,4 @@
 node_modules/
 artifacts/
 *.log
+public/workbench.html
