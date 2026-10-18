@@ -1,10 +1,107 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Countback — every carton accounted for</title><link rel="stylesheet" href="/style.css"></head>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f5f0">
+  <title>Countback delivery receiving</title>
+  <meta name="description" content="Receive a delivery by voice. Count cartons and loose units out loud, catch shortages, damage and extras, keep every correction and export the receipt.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
 <body>
-<header><a href="/" class="brand"><span class="brand-icon">▥</span> countback<span class="beta">LAB</span></a><div class="header-meta"><span class="dot"></span> Receiving workspace <span class="divider">/</span> Corner Store</div><button id="reset" class="subtle">New receipt ↗</button></header>
-<main><section class="intro"><div><p class="eyebrow">LESS TYPING. MORE UNPACKING.</p><h1>Hands full?<br>Just <span>count it out.</span></h1><p class="lede">Receive a delivery by voice. Countback tracks the counts,<br class="desktop"> catches discrepancies, and keeps every correction.</p></div><div class="order-card"><span class="eyebrow">TODAY’S DELIVERY</span><div class="order-number">PO–1048 <span>IN PROGRESS</span></div><p>Northside Supply → Corner Store</p><div class="order-footer"><span>3 product lines</span><span>Synthetic demo order</span></div></div></section>
-<div class="workspace"><section class="voice-panel"><div class="panel-label"><span>01 / VOICE DESK</span><span id="mode-label">READY WHEN YOU ARE</span></div><div id="orb" class="orb"><svg viewBox="0 0 60 60" aria-hidden="true"><path d="M18 26v8m6-16v24m6-31v38m6-31v24m6-16v8"/></svg></div><h2 id="voice-title">Let’s check this delivery.</h2><p id="voice-description">“Five cartons of oat milk.<br>Two bottles are damaged.”</p><div class="voice-actions"><button class="primary" id="start">● Start receiving</button><button id="stop" hidden>■ End session</button><button class="secondary" id="live-sample">Try live sample audio ↗</button><button class="secondary" id="demo">Try guided demo <span>↗</span></button></div><label class="keyboard-option"><input type="checkbox" id="keyboard"> Use keyboard instead of microphone</label><form id="typed-form" hidden><label for="typed-count">Type a count or correction</label><input id="typed-count" maxlength="1000" autocomplete="off" placeholder="Six cartons of oat milk, two damaged"><button type="submit">Send count ↗</button></form><div id="access-wrap" hidden><label for="access">Live demo access code</label><input id="access" type="password" autocomplete="off"></div><p class="privacy">Live voice uses AssemblyAI. Microphone starts only<br>when you choose it. Sessions end after 3 minutes.</p><p class="status" id="status" role="status" aria-live="polite">Guided demo available without a microphone.</p><div class="conversation"><div class="section-top"><h3>Conversation</h3><span id="message-count">0 turns</span></div><div id="transcript"><p class="empty-transcript">Your spoken counts and readbacks will appear here.</p></div></div></section>
-<section class="receipt-panel"><div class="panel-label"><span>02 / DELIVERY RECEIPT</span><span class="draft-badge">DRAFT · REVIEW BEFORE EXPORT</span></div><div class="receipt-title"><h2>Every carton, accounted for.</h2><p>Counts replace previous totals. Damaged units are included in received.</p></div><div class="stats"><div><strong id="checked">0<span>/3</span></strong><p>LINES CHECKED</p></div><div><strong id="short">—</strong><p>UNITS SHORT</p></div><div><strong id="damage">—</strong><p>UNITS DAMAGED</p></div></div><div class="table-wrap"><table><thead><tr><th>PRODUCT / PACK</th><th>ORDERED</th><th>RECEIVED</th><th>CONDITION</th><th></th></tr></thead><tbody id="rows"></tbody></table></div><div id="discrepancies" class="discrepancies"><span class="small-icon">⌁</span><div><strong>The count starts with you.</strong><p>Check a product to reveal shortages and damaged stock.</p></div></div><div class="section-top ledger-heading"><h3>Count history</h3><span id="revision">NO CHANGES YET</span></div><div id="history" class="history"><p class="empty-history">Corrections stay visible here. Nothing disappears.</p></div><div class="receipt-bottom"><p id="review-note">Check all three lines before exporting.</p><button id="export" disabled>Export receipt ↓</button></div></section></div>
-<footer><span>Built for the moment between the truck and the shelf. <a href="/about.html">Watch the walkthrough ↗</a></span><span>AssemblyAI Voice Agent API <span class="divider">×</span> Countback</span></footer></main>
-<dialog id="edit-dialog"><form id="edit-form"><p class="eyebrow">REVIEW COUNT</p><h2 id="edit-title"></h2><p>Enter the complete count, including damaged units.</p><label>Cartons<input type="number" min="0" max="10000" step="1" id="cartons" required></label><label>Loose units<input type="number" min="0" max="10000" step="1" id="loose" required></label><label>Damaged units<input type="number" min="0" max="10000" step="1" id="damaged" required></label><p id="edit-error" role="alert"></p><div class="dialog-actions"><button type="button" id="cancel-edit">Cancel</button><button class="primary">Save corrected count</button></div></form></dialog>
-<script type="module" src="/app.mjs"></script></body></html>
+  <a class="skip-link" href="#receipt">Skip to the receipt</a>
+  <header class="topbar">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span>Countback</a>
+    <div class="topbar-actions">
+      <button class="button button-quiet" id="reset" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4"/></svg><span>New receipt</span></button>
+    </div>
+  </header>
+
+  <main id="main" class="page">
+    <section class="delivery" aria-labelledby="po-title">
+      <div>
+        <p class="delivery-label">Inbound delivery</p>
+        <h1 id="po-title">PO-1048</h1>
+        <p class="delivery-route" id="route">Northside Supply to Larch Street Café</p>
+        <dl class="delivery-meta" id="delivery-meta"></dl>
+      </div>
+      <div>
+        <p class="progress-label"><span>Lines counted</span><strong id="progress-count">0 of 6</strong></p>
+        <div class="progress-track" id="progress-track" aria-hidden="true"></div>
+        <p class="progress-key"><span class="k-match">Matches</span><span class="k-flag">Needs a look</span><span class="k-open">Not counted</span></p>
+      </div>
+    </section>
+
+    <div class="workspace">
+      <aside class="panel" aria-labelledby="voice-title">
+        <div class="voice-top">
+          <div id="orb" class="orb" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 10v4M9 7v10M13 4v16M17 7v10M21 10v4"/></svg></div>
+          <div><p class="mode-label" id="mode-label">Ready when you are</p><h2 id="voice-title">Count it out loud</h2></div>
+        </div>
+        <p class="panel-copy" id="voice-description">Say the product, the cartons, any loose units and any damage. Countback reads it back and fills in the receipt.</p>
+        <div class="panel-actions">
+          <button class="button button-primary" id="start" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Start receiving</button>
+          <button class="button button-secondary" id="stop" type="button" hidden>End session</button>
+          <button class="button button-secondary" id="live-sample" type="button">Play sample audio live</button>
+          <button class="button button-secondary" id="demo" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5v14l11-7z"/></svg>Play the walkthrough</button>
+          <button class="button button-secondary" id="stop-demo" type="button" hidden>Stop the walkthrough</button>
+        </div>
+        <label class="keyboard-option" for="keyboard"><input type="checkbox" id="keyboard">Type instead of speaking</label>
+        <form id="typed-form" class="typed-form" hidden><label for="typed-count">Type a count or correction</label><input id="typed-count" maxlength="1000" autocomplete="off" placeholder="Six cartons of oat milk, two damaged"><button class="button button-primary" type="submit">Send</button></form>
+        <div id="access-wrap" class="access-wrap" hidden><label for="access">Access code for live voice</label><input id="access" type="password" autocomplete="off"></div>
+        <p class="status-line" id="walkthrough-status" role="status" aria-live="polite">The walkthrough works without a microphone.</p>
+        <div class="log-head"><h3 id="log-title">Conversation</h3><span id="message-count">No entries</span></div>
+        <div class="transcript" id="transcript" role="log" aria-labelledby="log-title" tabindex="0"></div>
+        <p class="panel-note">Live voice sends audio to AssemblyAI for transcription. The microphone starts only when you choose it, and a session ends after three minutes. The walkthrough is scripted and stays on this page.</p>
+      </aside>
+
+      <section class="receipt" id="receipt" aria-labelledby="receipt-title" tabindex="-1">
+        <div class="receipt-head">
+          <div><h2 id="receipt-title">Receipt</h2><p>A new count replaces the line total. Earlier counts stay in the history.</p></div>
+          <span class="draft-chip" id="draft-chip">Draft</span>
+        </div>
+        <div class="totals" id="totals"></div>
+        <table class="lines">
+          <caption class="visually-hidden">Delivery lines with ordered, received and usable units</caption>
+          <thead><tr><th scope="col">Product</th><th scope="col" class="num-col">Ordered</th><th scope="col" class="num-col">Received</th><th scope="col" class="num-col">Usable</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Action</span></th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+
+        <div class="subhead"><h3 id="attention-title">Needs attention</h3><span id="attention-count"></span></div>
+        <ul class="attention" id="attention" aria-labelledby="attention-title"></ul>
+
+        <div class="subhead"><h3 id="history-title">Count history</h3><span id="revision"></span></div>
+        <ol class="history" id="history" aria-labelledby="history-title" reversed></ol>
+
+        <div class="receipt-foot">
+          <p id="review-note">Count all six lines to export the receipt.</p>
+          <div class="foot-actions">
+            <button class="button button-secondary" id="print" type="button" disabled>Print</button>
+            <button class="button button-primary" id="export" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Export CSV</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <footer class="page-footer">Countback is an independent prototype. The order, supplier and café are fictional. <a href="/about.html">Watch the project walkthrough</a></footer>
+
+  <dialog id="edit-dialog" aria-labelledby="edit-title">
+    <form id="edit-form" novalidate>
+      <h2 id="edit-title">Count line</h2>
+      <p class="dialog-intro" id="edit-intro">Enter the full count for this line. Damaged units are part of the received total.</p>
+      <div class="field-grid">
+        <label for="cartons">Cartons<input type="number" inputmode="numeric" min="0" max="10000" step="1" id="cartons" required></label>
+        <label for="loose">Loose units<input type="number" inputmode="numeric" min="0" max="10000" step="1" id="loose" required></label>
+        <label for="damaged">Damaged<input type="number" inputmode="numeric" min="0" max="10000" step="1" id="damaged" required></label>
+      </div>
+      <p class="live-total" id="live-total" aria-live="polite"></p>
+      <p id="edit-error" class="edit-error" role="alert"></p>
+      <div class="dialog-actions"><button type="button" class="button button-secondary" id="cancel-edit">Cancel</button><button class="button button-primary" type="submit">Save count</button></div>
+    </form>
+  </dialog>
+</body>
+</html>

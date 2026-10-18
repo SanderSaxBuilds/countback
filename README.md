@@ -6,7 +6,7 @@ A hands-free delivery receiving workspace for the AssemblyAI Voice Agent Hackath
 
 https://countback.vercel.app
 
-Choose **Try guided demo** for an API-free scripted walkthrough. **Try live sample audio** streams labeled synthetic speech through the actual AssemblyAI Voice Agent API without opening the microphone. Live modes require the judge access code.
+Choose **Play the walkthrough** for an API-free scripted delivery. **Play sample audio live** streams labeled synthetic speech through the actual AssemblyAI Voice Agent API without opening the microphone. Live modes require the judge access code. The hosted app may still show the earlier three-line version until it is redeployed.
 
 ## Run locally
 
@@ -15,7 +15,7 @@ Requires Node.js 22+. No packages required.
 1. Copy `.env.example` to `.env` and set `ASSEMBLYAI_API_KEY`.
 2. Run `node --env-file-if-exists=.env server.mjs`.
 3. Open `http://localhost:3210` in a browser.
-4. Choose **Try guided demo** for a clearly labeled scripted walkthrough, or **Start receiving** for live AssemblyAI speech-in/speech-out with microphone permission.
+4. Choose **Play the walkthrough** for a clearly labeled scripted delivery, or **Start receiving** for live AssemblyAI speech in and speech out with microphone permission.
 
 Run tests with `node --test`.
 
@@ -28,7 +28,9 @@ Run tests with `node --test`.
 - Arithmetic is deterministic: cartons × pack size + loose = received; usable = received − damaged. Damage is included in received.
 - Each change must quote an actual user transcript. This verifies quote provenance, not semantic truth: users must review the extracted quantities.
 - Manual review and CSV export stay in the browser. No inventory systems, payments, or purchase orders are modified. Data is not persisted after refresh.
-- Guided demo is scripted and makes no API calls. It is never presented as a live model result.
+- The walkthrough is scripted and makes no API calls. It is never presented as a live model result.
+- The fictional order has six lines: oat milk, coffee beans, paper cups, cup lids, whole milk and napkins. The voice tool schema and key terms are generated from the order. The four sample clips cover the first three lines.
+- Every line shows all of its exceptions together, so a line that is short and damaged shows both. The receipt can be printed, and the CSV includes pack size, cartons, loose units and how many counts were recorded.
 
 ## Hosting
 
@@ -45,6 +47,10 @@ The purchase order is entirely synthetic. Live audio and session configuration a
 - https://lablab.ai/ai-hackathons/assemblyai-voice-agent-hackathon
 
 ## Current validation
+
+19 October 2026 update: the order grew from three to six lines, the interface was redesigned and evidence quotes now have to match whole words, so a quote of "4 cartons" can no longer borrow from a transcript that said "14 cartons". Fifteen unit tests pass with `node --test`. The guided walkthrough, manual counts, CSV export and layouts were checked in a headless browser, and the voice message handler was exercised against a mocked socket. A live AssemblyAI session has not been re-run with the six-line order, so the results below describe the earlier three-line version.
+
+Earlier validation:
 
 Ten unit tests pass for arithmetic, replacement corrections, duplicate calls, invalid counts, evidence provenance, overage and CSV quoting. A live AssemblyAI keyboard-to-voice session successfully called record_count for three products and an oat-milk correction: final totals 72 bottles (2 damaged), 24 bags, and 45 sleeves (5 short), with four retained history events. The 180-second cap ended the session correctly. The hosted app and its token endpoint were verified with a real keyboard-to-voice tool call. A live PCM audio test transcribed all four prerecorded utterances and saved the expected 72 / 24 / 45 totals, including the correction and four history events. The sample speech is synthetic; transcripts and tool results are actual AssemblyAI responses. Physical microphone testing and field trials remain pending.
 

@@ -1,1 +1,45 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Countback - project walkthrough</title><link rel="stylesheet" href="/style.css"></head><body><header><a class="brand" href="/">countback <span class="beta">LAB</span></a><a href="/">Open receiving workspace ↗</a></header><main style="max-width:1000px"><p class="eyebrow">ASSEMBLYAI VOICE AGENT HACKATHON</p><h1 style="font-size:48px">A receipt you can check.</h1><p class="lede">A narrated walkthrough using actual screenshots from a completed live AssemblyAI test. Narration and sample input speech are synthetic; API transcripts and count results are real.</p><video controls preload="metadata" poster="/countback-cover.png" style="width:100%;border-radius:20px;margin:30px 0"><source src="/countback-demo.mp4" type="video/mp4">Download the video below.</video><p><a href="/countback-pitch.pdf">Read the pitch deck (PDF) ↗</a> &nbsp; · &nbsp; <a href="/countback-demo.mp4" download>Download the video ↗</a> &nbsp; · &nbsp; <a href="https://github.com/SanderSaxBuilds/countback">View the source ↗</a></p><h2 style="margin-top:40px">Try the workflow</h2><p>Open the workspace and choose <strong>Try guided demo</strong> for a clearly labeled scripted example with no API calls. Live modes require the judge access code. <strong>Try live sample audio</strong> streams four prerecorded clips through AssemblyAI without opening your microphone. You can also type counts or choose <strong>Start receiving</strong> to use your microphone.</p><p>Expected sample result: 72 oat-milk bottles including 2 damaged, 24 coffee bags, and 45 cup sleeves with a shortage of 5. The first oat-milk count and its correction remain in history. Review the receipt, optionally edit a product, then export the CSV.</p><p>This is an English-language prototype with synthetic stock data, three fixed product lines, and a three-minute voice session limit. Physical microphone testing, field trials, persistence and inventory integration remain future work.</p><footer>Built with AI assistance by Alexandr Khrustalev / SanderSaxBuilds. MIT licensed.</footer></main></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f5f0">
+  <title>Countback project walkthrough</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .about { max-width: 920px; }
+    .about h1 { margin-top: 6px; font-size: clamp(32px, 5vw, 44px); font-weight: 700; }
+    .about .lede { margin-top: 12px; font-size: 18px; color: var(--muted); }
+    .about video { display: block; width: 100%; margin: 28px 0 16px; border-radius: var(--radius); background: var(--deep); }
+    .about-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .about h2 { margin-top: 36px; font-size: 24px; }
+    .about p + p, .about h2 + p { margin-top: 12px; }
+    .about .kicker { font-size: 14px; font-weight: 600; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span>Countback</a>
+    <a class="button button-secondary" href="/">Open the receiving workspace</a>
+  </header>
+  <main class="page about">
+    <p class="kicker">AssemblyAI Voice Agent Hackathon</p>
+    <h1>A receipt you can check</h1>
+    <p class="lede">A narrated walkthrough using screenshots from a completed live AssemblyAI test. The narration and the sample input speech are synthetic. The API transcripts and count results are real.</p>
+    <video controls preload="metadata" poster="/countback-cover.png"><source src="/countback-demo.mp4" type="video/mp4">Your browser cannot play this video. Use the download link below.</video>
+    <ul class="about-links">
+      <li><a class="button button-secondary" href="/countback-pitch.pdf">Read the pitch deck, PDF</a></li>
+      <li><a class="button button-secondary" href="/countback-demo.mp4" download>Download the video</a></li>
+      <li><a class="button button-secondary" href="https://github.com/SanderSaxBuilds/countback">View the source</a></li>
+    </ul>
+    <h2>Try the workflow</h2>
+    <p>Open the workspace and choose <strong>Play the walkthrough</strong> for a scripted delivery with no API calls. Live modes need the judge access code. <strong>Play sample audio live</strong> streams four prerecorded clips through AssemblyAI without opening your microphone. You can also type counts, or choose <strong>Start receiving</strong> to use your microphone.</p>
+    <p>The sample clips count oat milk, coffee beans and paper cups: 72 oat milk bottles including 2 damaged, 24 coffee bags and 45 cup sleeves with a shortage of 5. The first oat milk count and its correction both stay in the history. The other three lines of the order can be counted by hand or by voice. Review the receipt, then export the CSV.</p>
+    <p>This is an English-language prototype with a fictional order and a three-minute voice session limit. Physical microphone testing, field trials, saved history and inventory integration are future work.</p>
+  </main>
+  <footer class="page-footer">Built with AI assistance by Alexandr Khrustalev, SanderSaxBuilds. MIT licensed.</footer>
+</body>
+</html>
